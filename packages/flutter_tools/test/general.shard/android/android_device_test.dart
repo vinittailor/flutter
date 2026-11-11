@@ -524,6 +524,78 @@ Uptime: 441088659 Realtime: 521464097
     expect(json, containsPair('platform', 'Android'));
   });
 
+  testWithoutContext('Can parse adb shell dumpsys info with both Pss and Rss columns', () {
+    const exampleOutput = r'''
+Applications Memory Usage (in Kilobytes):
+Uptime: 531675142 Realtime: 626068851
+
+** MEMINFO in pid 24205 [com.example.official_demo] **
+                   Pss  Private  Private  SwapPss      Rss     Heap     Heap     Heap
+                 Total    Dirty    Clean    Dirty    Total     Size    Alloc     Free
+                ------   ------   ------   ------   ------   ------   ------   ------
+  Native Heap    22669    22644        4       23    24300    35148    19447    12320
+  Dalvik Heap     3038     1292       68       11     8300    27038     2462    24576
+        TOTAL   129295   105862    15892      104   282166    62186    21909    36896
+
+ App Summary
+                       Pss(KB)                        Rss(KB)
+                        ------                         ------
+           Java Heap:     1780                          25184
+         Native Heap:    22644                          24300
+                Code:    22868                         153224
+               Stack:     1224                           1232
+            Graphics:    61462                          61466
+       Private Other:    11776
+              System:     7541
+             Unknown:                                   16760
+
+           TOTAL PSS:   129295            TOTAL RSS:   282166       TOTAL SWAP PSS:      104
+
+ Objects
+               Views:        9         ViewRootImpl:        1
+         AppContexts:        3           Activities:        1
+              Assets:        4        AssetManagers:        3
+       Local Binders:       10        Proxy Binders:       18
+       Parcel memory:        6         Parcel count:       24
+    Death Recipients:        0      OpenSSL Sockets:        0
+            WebViews:        0
+
+ SQL
+         MEMORY_USED:        0
+  PAGECACHE_OVERFLOW:        0          MALLOC_SIZE:        0
+''';
+
+    final AndroidMemoryInfo result = parseMeminfoDump(exampleOutput);
+
+    // Parses correctly
+    expect(result.realTime, 626068851);
+    expect(result.javaHeap, 1780);
+    expect(result.nativeHeap, 22644);
+    expect(result.code, 22868);
+    expect(result.stack, 1224);
+    expect(result.graphics, 61462);
+    expect(result.privateOther, 11776);
+    expect(result.system, 7541);
+
+    // toJson works correctly
+    final Map<String, Object> json = result.toJson();
+
+    expect(json, containsPair('Realtime', 626068851));
+    expect(json, containsPair('Java Heap', 1780));
+    expect(json, containsPair('Native Heap', 22644));
+    expect(json, containsPair('Code', 22868));
+    expect(json, containsPair('Stack', 1224));
+    expect(json, containsPair('Graphics', 61462));
+    expect(json, containsPair('Private Other', 11776));
+    expect(json, containsPair('System', 7541));
+
+    // computed from summation of other fields.
+    expect(json, containsPair('Total', 129295));
+
+    // contains identifier for platform in memory info.
+    expect(json, containsPair('platform', 'Android'));
+  });
+
   testWithoutContext('AndroidDevice stopApp does nothing if app is not passed', () async {
     final AndroidDevice device = setUpAndroidDevice();
 
